@@ -1,0 +1,65 @@
+# UDS 诊断测试用例
+# 字段说明：
+#   name              - 用例名称
+#   request           - 请求报文（十六进制，空格分隔）
+#   expected_response - 期望响应（完全匹配）
+#   expected_prefix   - 期望响应前缀（适合响应带数据的场景）
+#   expected_length   - 期望响应总长度
+#   nrc               - 期望的否定响应码（0x7F 场景）
+
+test_cases:
+  # ========== 0x10 会话控制 ==========
+  - name: 进扩展会话
+    request: "10 03"
+    expected_response: "50 03"
+
+  - name: 回默认会话
+    request: "10 01"
+    expected_response: "50 01"
+
+  - name: 不支持的子功能
+    request: "10 99"
+    nrc: "12"
+
+  # ========== 0x22 读数据 ==========
+  - name: 读 VIN
+    request: "22 F1 90"
+    expected_prefix: "62 F1 90"
+    expected_length: 20
+
+  - name: 不存在的 DID
+    request: "22 FF FF"
+    nrc: "31"
+
+  # ========== 0x3E 心跳 ==========
+  - name: 心跳
+    request: "3E 80"
+    expected_response: "7E 00"
+
+  # ========== 0x27 安全访问 ==========
+  - name: 请求种子
+    request: "27 01"
+    expected_prefix: "67 01"
+    expected_length: 18   # 2 字节头 + 16 字节种子
+
+  - name: 密钥错误
+    request: "27 02 FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF"
+    nrc: "35"
+
+  - name: 正确密钥解锁
+    dynamic: unlock
+
+  # ========== 0x2E 写数据 ==========
+  - name: 默认会话写 VIN 被拒
+    request: "2E F1 90 54 45 53 54 56 49 4E 31 32 33 34 35 36 37 38 39 30"
+    nrc: "7F"
+
+  - name: 扩展会话未解锁写 VIN 被拒
+    dynamic: write_vin_no_unlock
+
+  - name: 解锁后写 VIN
+    dynamic: write_vin
+  # ========== 未知服务 ==========
+  - name: 未知服务
+    request: "99 00"
+    nrc: "11"
